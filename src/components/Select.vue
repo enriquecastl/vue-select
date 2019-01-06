@@ -16,7 +16,7 @@
   .v-select[dir="rtl"] .vs__actions {
     padding: 0 3px 0 6px;
   }
-  .v-select[dir="rtl"] .dropdown-toggle .clear {
+  .v-select[dir="rtl"] .v-select-v-select-dropdown-toggle .clear {
     margin-left: 6px;
     margin-right: 0;
   }
@@ -24,7 +24,7 @@
     margin-left: 0;
     margin-right: 2px;
   }
-  .v-select[dir="rtl"] .dropdown-menu {
+  .v-select[dir="rtl"] .v-select-dropdown-menu {
     text-align: right;
   }
 
@@ -62,7 +62,7 @@
   }
 
   /* Dropdown Toggle */
-  .v-select .dropdown-toggle {
+  .v-select .v-select-dropdown-toggle {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -88,7 +88,7 @@
   }
 
   /* Clear Button */
-  .v-select .dropdown-toggle .clear {
+  .v-select .v-select-dropdown-toggle .clear {
     font-size: 23px;
     font-weight: 700;
     line-height: 1;
@@ -101,19 +101,19 @@
   }
 
   /* Dropdown Toggle States */
-  .v-select.searchable .dropdown-toggle {
+  .v-select.searchable .v-select-dropdown-toggle {
     cursor: text;
   }
-  .v-select.unsearchable .dropdown-toggle {
+  .v-select.unsearchable .v-select-dropdown-toggle {
     cursor: pointer;
   }
-  .v-select.open .dropdown-toggle {
+  .v-select.open .v-select-dropdown-toggle {
     border-bottom-color: transparent;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }
   /* Dropdown Menu */
-  .v-select .dropdown-menu {
+  .v-select .v-select-dropdown-menu {
     display:block;
     position: absolute;
     top: 100%;
@@ -227,11 +227,11 @@
   .v-select li:hover {
     cursor: pointer;
   }
-  .v-select .dropdown-menu .active > a {
+  .v-select .v-select-dropdown-menu .active > a {
     color: #333;
     background: rgba(50, 50, 50, .1);
   }
-  .v-select .dropdown-menu > .highlight > a {
+  .v-select .v-select-dropdown-menu > .highlight > a {
     /*
      * required to override bootstrap 3's
      * .dropdown-menu > li > a:hover {} styles
@@ -265,9 +265,9 @@
   }
 
   /* Disabled state */
-  .v-select.disabled .dropdown-toggle,
-  .v-select.disabled .dropdown-toggle .clear,
-  .v-select.disabled .dropdown-toggle input,
+  .v-select.disabled .v-select-dropdown-toggle,
+  .v-select.disabled .v-select-dropdown-toggle .clear,
+  .v-select.disabled .v-select-dropdown-toggle input,
   .v-select.disabled .selected-tag .close,
   .v-select.disabled .open-indicator {
     cursor: not-allowed;
@@ -307,8 +307,8 @@
 </style>
 
 <template>
-  <div :dir="dir" class="dropdown v-select" :class="dropdownClasses">
-    <div ref="toggle" @mousedown.prevent="toggleDropdown" class="dropdown-toggle">
+  <div :dir="dir" class="v-select-dropdown v-select" :class="dropdownClasses">
+    <div ref="toggle" @mousedown.prevent="toggleDropdown" class="v-select-dropdown-toggle">
 
       <div class="vs__selected-options" ref="selectedOptions">
         <slot v-for="option in valueAsArray" name="selected-option-container"
@@ -369,7 +369,7 @@
     </div>
 
     <transition :name="transition">
-      <ul ref="dropdownMenu" v-if="dropdownOpen" class="dropdown-menu" :style="{ 'max-height': maxHeight }" role="listbox" @mousedown="onMousedown">
+      <ul ref="dropdownMenu" v-if="dropdownOpen" class="v-select-dropdown-menu" :style="{ 'max-height': maxHeight }" role="listbox" @mousedown="onMousedown">
         <li role="option" v-for="(option, index) in filteredOptions" v-bind:key="index" :class="{ active: isOptionSelected(option), highlight: index === typeAheadPointer }" @mouseover="typeAheadPointer = index">
           <a @mousedown.prevent.stop="select(option)">
           <slot name="option" v-bind="(typeof option === 'object')?option:{[label]: option}">

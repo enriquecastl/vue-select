@@ -73,6 +73,9 @@
     border-radius: 4px;
     white-space: normal;
   }
+  .v-select .dropdown-toggle::after {
+    display: none;
+  }
   .v-select .vs__selected-options {
     display: flex;
     flex-basis: 100%;
@@ -123,7 +126,7 @@
     padding: 5px 0;
     margin: 0;
     width: 100%;
-    overflow-y: scroll;
+    overflow-y: auto;
     border: 1px solid rgba(0, 0, 0, .26);
     box-shadow: 0px 3px 6px 0px rgba(0,0,0,.15);
     border-top: none;
@@ -205,9 +208,10 @@
     box-shadow: none;
     flex-grow: 1;
     width: 0;
+    height: inherit;
   }
   .v-select.unsearchable input[type="search"] {
-    opacity: 0;
+    opacity: 1;
   }
   .v-select.unsearchable input[type="search"]:hover {
     cursor: pointer;
@@ -307,8 +311,8 @@
 </style>
 
 <template>
-  <div :dir="dir" class="v-select-dropdown v-select" :class="dropdownClasses">
-    <div ref="toggle" @mousedown.prevent="toggleDropdown" class="v-select-dropdown-toggle">
+  <div :dir="dir" :class="dropdownClasses">
+    <div ref="toggle" @mousedown.prevent="toggleDropdown" class="dropdown-toggle">
 
       <div class="vs__selected-options" ref="selectedOptions">
         <slot v-for="option in valueAsArray" name="selected-option-container"
@@ -325,7 +329,7 @@
 
         <input
                 ref="search"
-                v-model="search"
+                :value="search"
                 @keydown.delete="maybeDeleteValue"
                 @keyup.esc="onEscape"
                 @keydown.up.prevent="typeAheadUp"
@@ -334,9 +338,10 @@
                 @keydown.tab="onTab"
                 @blur="onSearchBlur"
                 @focus="onSearchFocus"
+                @input="search = $event.target.value"
                 type="search"
                 class="form-control"
-                autocomplete="off"
+                :autocomplete="autocomplete"
                 :disabled="disabled"
                 :placeholder="searchPlaceholder"
                 :tabindex="tabindex"
@@ -369,7 +374,7 @@
     </div>
 
     <transition :name="transition">
-      <ul ref="dropdownMenu" v-if="dropdownOpen" class="v-select-dropdown-menu" :style="{ 'max-height': maxHeight }" role="listbox" @mousedown="onMousedown">
+      <ul ref="dropdownMenu" v-if="dropdownOpen" class="dropdown-menu" :style="{ 'max-height': maxHeight }" role="listbox" @mousedown="onMousedown" @mouseup="onMouseup">
         <li role="option" v-for="(option, index) in filteredOptions" v-bind:key="index" :class="{ active: isOptionSelected(option), highlight: index === typeAheadPointer }" @mouseover="typeAheadPointer = index">
           <a @mousedown.prevent.stop="select(option)">
           <slot name="option" v-bind="(typeof option === 'object')?option:{[label]: option}">
@@ -512,6 +517,17 @@
         default: 'label'
       },
 
+
+      /**
+       * Value of the 'autocomplete' field of the input
+       * element.
+       * @type {String}
+       */
+      autocomplete: {
+        type: String,
+        default: 'off'
+      },
+
       /**
        * Tells vue-select what key to use when generating option
        * values when each `option` is an object.
@@ -566,7 +582,14 @@
       onChange: {
         type: Function,
         default: function (val) {
-          this.$emit('input', val)
+          this.$emit('change', val);
+        }
+      },
+
+      onInput: {
+        type: Function,
+        default: function (val) {
+          this.$emit('input', val);
         }
       },
 
@@ -826,10 +849,11 @@
           if (this.multiple && !this.mutableValue) {
             this.mutableValue = [option]
           } else if (this.multiple) {
-            this.mutableValue.push(option)
+            this.mutableValue = [...this.mutableValue, option]
           } else {
             this.mutableValue = option
           }
+          this.onInput(this.mutableValue);
         }
 
         this.onAfterSelect(option)
@@ -848,11 +872,11 @@
               ref = val
             }
           })
-          var index = this.mutableValue.indexOf(ref)
-          this.mutableValue.splice(index, 1)
+          this.mutableValue = this.mutableValue.filter(entry => entry !== ref)
         } else {
           this.mutableValue = null
         }
+        this.onInput(this.mutableValue);
       },
 
       /**
@@ -861,6 +885,7 @@
        */
       clearSelection() {
         this.mutableValue = this.multiple ? [] : null
+        this.onInput(this.mutableValue)
       },
 
       /**
@@ -904,15 +929,12 @@
        * @return {Boolean}        True when selected | False otherwise
        */
       isOptionSelected(option) {
-          let selected = false
-          this.valueAsArray.forEach(value => {
-            if (typeof value === 'object') {
-              selected = this.optionObjectComparator(value, option)
-            } else if (value === option || value === option[this.index]) {
-              selected = true
-            }
-          })
-          return selected
+        return this.valueAsArray.some(value => {
+          if (typeof value === 'object') {
+            return this.optionObjectComparator(value, option)
+          }
+          return value === option || value === option[this.index]
+        })
       },
 
       /**
@@ -975,9 +997,24 @@
           if (this.clearSearchOnBlur) {
             this.search = ''
           }
-          this.open = false
-          this.$emit('search:blur')
+          this.closeSearchOptions()
+          return
         }
+        // Fixed bug where no-options message could not be closed
+        if(this.search.length === 0 && this.options.length === 0){
+          this.closeSearchOptions()
+          return
+        }
+      },
+
+      /**
+       * 'Private' function to close the search options
+       * @emits  {search:blur}
+       * @returns {void}
+       */
+      closeSearchOptions(){
+        this.open = false
+        this.$emit('search:blur')
       },
 
       /**
@@ -996,8 +1033,8 @@
        * @return {this.value}
        */
       maybeDeleteValue() {
-        if (!this.$refs.search.value.length && this.mutableValue) {
-          return this.multiple ? this.mutableValue.pop() : this.mutableValue = null
+        if (!this.$refs.search.value.length && this.mutableValue && this.clearable) {
+          this.mutableValue = this.multiple ? this.mutableValue.slice(0, -1) : null
         }
       },
 
@@ -1044,6 +1081,10 @@
        */
       onMousedown() {
         this.mousedown = true
+      },
+
+      onMouseup() {
+        this.mousedown = false
       }
     },
 
@@ -1055,6 +1096,8 @@
        */
       dropdownClasses() {
         return {
+          'v-select': true,
+          dropdown: true,
           open: this.dropdownOpen,
           single: !this.multiple,
           searching: this.searching,
